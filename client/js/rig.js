@@ -1,10 +1,3 @@
-// Vision's 3D rig — ported from the sibling `compiler` project's
-// simulator.html. Same parse-OBJ-by-hand + three.js r128 rendering approach,
-// same setEyeAngle/setBodyTurn/setWalking/setDancing/setStopped API, just
-// loading the model from a real file instead of an inlined <script> tag,
-// and with no compiled-program player attached — the caller (client.js)
-// drives it live.
-
 export const Rig = (function () {
   const mount = document.getElementById("stage3d");
   const loadingEl = document.getElementById("modelLoading");
@@ -16,7 +9,7 @@ export const Rig = (function () {
   const target = new THREE.Vector3();
   let t = 0;
 
-  const mode = { walking: false, dancing: false, stopped: false };
+  const mode = { walking: false, walkDir: 1, dancing: false, stopped: false };
   let bodyTurnDeg = 0;
   let eyeAngleDeg = 90;
   let idleNudgeDeg = 0; // subtle extra offset while the mic hears someone talking
@@ -113,12 +106,21 @@ export const Rig = (function () {
       } else if (mode.walking) {
         bob = Math.abs(Math.sin(t * 8.5)) * radius * 0.035;
         sway = Math.sin(t * 4.25) * 0.035;
+        // Move across the grid in the direction the body is facing
+        const yaw = (bodyTurnDeg * Math.PI) / 180;
+        const speed = radius * 0.045 * mode.walkDir; // units per frame (~60fps)
+        root.position.x += Math.sin(yaw) * speed;
+        root.position.z += Math.cos(yaw) * speed;
       }
       const eyeYaw = ((eyeAngleDeg + idleNudgeDeg - 90) / 90) * 0.28;
       root.rotation.y = Math.PI + (bodyTurnDeg * Math.PI) / 180 + eyeYaw * 0.4;
       root.rotation.z = sway;
       root.rotation.x = lean;
       root.position.y = bob;
+      // Keep orbit camera centered on the robot as it moves
+      target.x = root.position.x;
+      target.z = root.position.z;
+      updateCamera();
     } else if (model && mode.stopped) {
       root.rotation.z *= 0.9;
       root.rotation.x *= 0.9;
@@ -200,7 +202,7 @@ export const Rig = (function () {
     setEyeAngle: (deg) => { eyeAngleDeg = deg; },
     setIdleNudge: (deg) => { idleNudgeDeg = deg; },
     setBodyTurn: (deg) => { bodyTurnDeg = deg; },
-    setWalking: (v) => { mode.walking = v; },
+    setWalking: (v, dir = 1) => { mode.walking = !!v; mode.walkDir = dir >= 0 ? 1 : -1; },
     setDancing: (v) => { mode.dancing = v; },
     setStopped: (v) => { mode.stopped = v; },
     getEyeAngle: () => eyeAngleDeg,

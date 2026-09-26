@@ -108,20 +108,40 @@ body {
   padding: 6px 10px; border-radius: 7px; backdrop-filter: blur(6px);
 }
 
-/* ── Caption: the only "conversation" UI — appears, then fades ── */
+/* ── Caption: side toaster — appears, then fades ── */
 .caption {
-  position: absolute; left: 50%; top: 22%;
-  transform: translate(-50%, -8px);
-  max-width: min(560px, 84vw);
-  padding: 10px 16px; border-radius: 14px;
-  background: rgba(17,17,19,0.85); border: 1px solid var(--border-2);
-  backdrop-filter: blur(8px);
-  font-size: 14.5px; line-height: 1.5; text-align: center;
-  opacity: 0; pointer-events: none;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  left: auto;
+  transform: translateX(12px);
+  max-width: min(320px, 72vw);
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(17,17,19,0.92);
+  border: 1px solid var(--border-2);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
   transition: opacity .25s ease, transform .25s ease;
+  z-index: 15;
 }
-.caption.show { opacity: 1; transform: translate(-50%, 0); }
-.caption .who { display: block; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); margin-bottom: 3px; }
+.caption.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+.caption .who {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
 .caption.user .who { color: var(--purple); }
 .caption.assistant .who { color: var(--good); }
 
@@ -194,7 +214,7 @@ body {
 }
 
 @media (max-width: 560px) {
-  .caption { top: 16%; }
+  .caption { top: 12px; right: 12px; max-width: min(280px, 80vw); }
   .mic-dock { bottom: 24px; }
   .keyboard-toggle { bottom: 24px; }
 }

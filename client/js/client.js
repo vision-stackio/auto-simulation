@@ -1,9 +1,3 @@
-// ---- Fail loudly instead of silently -------------------------------------
-// The two most common ways this breaks are (1) opening index.html directly
-// as a file instead of through the Node server, and (2) three.js failing to
-// load from the CDN. Both used to fail silently with only console errors —
-// now they show an obvious on-page message instead.
-
 const protoBanner = document.getElementById("protoBanner");
 if (location.protocol === "file:") {
   protoBanner.classList.add("show");
@@ -100,33 +94,33 @@ async function executeInstructions(instructions) {
       case "TURN_LEFT":
       case "TURN_RIGHT": {
         holdMs = typeof arg === "number" ? arg : DURATIONAL_DEFAULT[command];
-        const delta = command === "TURN_LEFT" ? -20 : 20;
-        Rig.setBodyTurn(Rig.getBodyTurn() + delta);
+        const delta = command === "TURN_LEFT" ? -90 : 90;
+        Rig.setBodyTurn(Rig.getBodyTurn() + delta); // keep new heading (no snap-back)
         await delay(holdMs);
-        Rig.setBodyTurn(Rig.getBodyTurn() - delta);
         break;
       }
 
       case "WALK_FORWARD":
       case "WALK_BACKWARD": {
-        holdMs = typeof arg === "number" ? arg : DURATIONAL_DEFAULT[command];
-        Rig.setWalking(true);
+        // Keep walking until WALK_STOP / "Vision, stop" — no auto timeout
+        const dir = command === "WALK_FORWARD" ? 1 : -1;
+        Rig.setDancing(false);
+        Rig.setWalking(true, dir);
         if (els.bodyState) els.bodyState.textContent = "Walking";
-        await delay(holdMs);
-        Rig.setWalking(false);
         break;
       }
 
       case "WALK_STOP":
         Rig.setWalking(false);
+        Rig.setDancing(false);
+        if (els.bodyState) els.bodyState.textContent = "Idle";
         break;
 
       case "DANCE": {
-        holdMs = typeof arg === "number" ? arg : DURATIONAL_DEFAULT.DANCE;
+        // Keep dancing until WALK_STOP / "Vision, stop"
+        Rig.setWalking(false);
         Rig.setDancing(true);
         if (els.bodyState) els.bodyState.textContent = "Dancing";
-        await delay(holdMs);
-        Rig.setDancing(false);
         break;
       }
 
@@ -153,7 +147,10 @@ async function executeInstructions(instructions) {
   }
 
   busyExecuting = false;
-  if (els.bodyState) els.bodyState.textContent = "Idle";
+  // Continuous actions (walk/dance) keep their label until stop
+  if (els.bodyState && els.bodyState.textContent === "Acting…") {
+    els.bodyState.textContent = "Idle";
+  }
 }
 
 /** Speaks the reply out loud while the command sequence plays concurrently,
