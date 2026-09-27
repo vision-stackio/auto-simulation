@@ -100,12 +100,22 @@ async function executeInstructions(instructions) {
         break;
       }
 
-      case "WALK_FORWARD":
-      case "WALK_BACKWARD": {
+      case "WALK_FORWARD": {
         // Keep walking until WALK_STOP / "Vision, stop" — no auto timeout
-        const dir = command === "WALK_FORWARD" ? 1 : -1;
         Rig.setDancing(false);
-        Rig.setWalking(true, dir);
+        Rig.setWalking(true, 1);
+        if (els.bodyState) els.bodyState.textContent = "Walking";
+        break;
+      }
+
+      case "WALK_BACKWARD": {
+        // Turn 180° from current heading, then walk forward in the new direction
+        Rig.setDancing(false);
+        Rig.setWalking(false);
+        Rig.setBodyTurn(Rig.getBodyTurn() + 180);
+        if (els.bodyState) els.bodyState.textContent = "Turning…";
+        await delay(600);
+        Rig.setWalking(true, 1);
         if (els.bodyState) els.bodyState.textContent = "Walking";
         break;
       }

@@ -3,6 +3,7 @@ export const Rig = (function () {
   const loadingEl = document.getElementById("modelLoading");
 
   let scene, camera, renderer, root, model;
+  let groundGrid = null, groundFloor = null, groundCell = 1;
   let radius = 1;
   let modelHeight = 1;
   const view = { theta: 0, phi: Math.PI * 0.48, dist: 3 };
@@ -93,6 +94,20 @@ export const Rig = (function () {
     renderer.setSize(mount.clientWidth, mount.clientHeight);
   }
 
+  /** Snap flat ground under the robot in whole-cell steps so it never ends
+   *  and grid lines stay world-aligned (no crawling under the feet). */
+  function updateInfiniteGround() {
+    if (!groundGrid) return;
+    const gx = Math.round(root.position.x / groundCell) * groundCell;
+    const gz = Math.round(root.position.z / groundCell) * groundCell;
+    groundGrid.position.x = gx;
+    groundGrid.position.z = gz;
+    if (groundFloor) {
+      groundFloor.position.x = gx;
+      groundFloor.position.z = gz;
+    }
+  }
+
   function loop() {
     requestAnimationFrame(loop);
     t += 0.016;
@@ -100,26 +115,45 @@ export const Rig = (function () {
     if (model && !mode.stopped) {
       let bob = 0, sway = 0, lean = 0;
       if (mode.dancing) {
-        bob = Math.abs(Math.sin(t * 7.8)) * radius * 0.09;
-        sway = Math.sin(t * 7.8) * 0.22;
-        lean = Math.sin(t * 3.9) * 0.09;
+        // Layered dance: bounce, hip rock, lean, spin wiggle, small circle
+        const beat = t * 6.2;
+        const half = t * 3.1;
+        const double = t * 12.4;
+        const bounce = Math.abs(Math.sin(beat));
+        bob = (0.55 * bounce + 0.25 * Math.abs(Math.sin(double)) + 0.12) * radius * 0.11;
+        sway = Math.sin(beat) * 0.28 + Math.sin(half) * 0.10;
+        lean = Math.sin(half * 1.15) * 0.14 + Math.sin(double) * 0.04;
+        const danceYaw = Math.sin(beat * 0.5) * 0.18 + Math.sin(double) * 0.05;
+        root.position.x += Math.sin(half) * radius * 0.006;
+        root.position.z += Math.cos(half * 1.3) * radius * 0.005;
+        const eyeYaw = ((eyeAngleDeg + idleNudgeDeg - 90) / 90) * 0.28;
+        root.rotation.y = Math.PI + (bodyTurnDeg * Math.PI) / 180 + danceYaw + eyeYaw * 0.25;
       } else if (mode.walking) {
-        bob = Math.abs(Math.sin(t * 8.5)) * radius * 0.035;
-        sway = Math.sin(t * 4.25) * 0.035;
-        // Move across the grid in the direction the body is facing
+        // Step cycle on solid mesh — bob, weight shift, lean
+        const step = t * 5.2;
+        const stepSin = Math.sin(step);
+        const stepAbs = Math.abs(stepSin);
+        bob = Math.pow(stepAbs, 0.65) * radius * 0.13;
+        sway = stepSin * 0.20;
+        lean = Math.cos(step) * 0.10;
         const yaw = (bodyTurnDeg * Math.PI) / 180;
-        const speed = radius * 0.045 * mode.walkDir; // units per frame (~60fps)
-        root.position.x += Math.sin(yaw) * speed;
-        root.position.z += Math.cos(yaw) * speed;
+        const speed = radius * (0.038 + 0.012 * stepAbs) * mode.walkDir;
+        root.position.x += Math.sin(yaw) * speed + Math.cos(yaw) * stepSin * radius * 0.008;
+        root.position.z += Math.cos(yaw) * speed - Math.sin(yaw) * stepSin * radius * 0.008;
+        const eyeYaw = ((eyeAngleDeg + idleNudgeDeg - 90) / 90) * 0.28;
+        const walkYawWiggle = stepSin * 0.09;
+        root.rotation.y = Math.PI + (bodyTurnDeg * Math.PI) / 180 + eyeYaw * 0.4 + walkYawWiggle;
+      } else {
+        const eyeYaw = ((eyeAngleDeg + idleNudgeDeg - 90) / 90) * 0.28;
+        root.rotation.y = Math.PI + (bodyTurnDeg * Math.PI) / 180 + eyeYaw * 0.4;
       }
-      const eyeYaw = ((eyeAngleDeg + idleNudgeDeg - 90) / 90) * 0.28;
-      root.rotation.y = Math.PI + (bodyTurnDeg * Math.PI) / 180 + eyeYaw * 0.4;
       root.rotation.z = sway;
       root.rotation.x = lean;
       root.position.y = bob;
-      // Keep orbit camera centered on the robot as it moves
+      // Camera + infinite ground follow the robot
       target.x = root.position.x;
       target.z = root.position.z;
+      updateInfiniteGround();
       updateCamera();
     } else if (model && mode.stopped) {
       root.rotation.z *= 0.9;
@@ -167,11 +201,14 @@ export const Rig = (function () {
       model.position.set(-parsed.centroid.x, -parsed.geo.boundingBox.min.y, -parsed.centroid.z);
       root.add(model);
 
+      // Flat grid — regenerated under the robot via cell snap (infinite look)
       const gridSize = 80, gridDivs = 80;
+      groundCell = gridSize / gridDivs;
       const grid = new THREE.GridHelper(gridSize, gridDivs, 0x2e2e32, 0x18181a);
       const mats = Array.isArray(grid.material) ? grid.material : [grid.material];
       mats.forEach((m) => { m.transparent = true; m.opacity = 0.9; m.depthWrite = false; });
       scene.add(grid);
+      groundGrid = grid;
 
       const floorGeo = new THREE.PlaneGeometry(gridSize * 2, gridSize * 2);
       floorGeo.rotateX(-Math.PI / 2);
@@ -179,6 +216,7 @@ export const Rig = (function () {
       const floorMesh = new THREE.Mesh(floorGeo, floorMat);
       floorMesh.position.y = -0.01;
       scene.add(floorMesh);
+      groundFloor = floorMesh;
 
       modelHeight = s.y;
       view.dist = radius / Math.sin(((camera.fov * Math.PI) / 180) / 2) * 1.05;
