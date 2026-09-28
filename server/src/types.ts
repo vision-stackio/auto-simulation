@@ -51,5 +51,21 @@ export interface ChatRequestBody {
 export interface ChatResponseBody {
   reply: string;
   instructions: Instruction[];
-  source: "direct" | "llm" | "fallback";
+  source: "direct" | "llm" | "fallback" | "scraper";
+  action?: "open_identify";
+}
+
+/** Body sent by the client for the /api/identify endpoint.
+ *  imageBase64 is the raw base64 string (no data-URI prefix). */
+export interface IdentifyRequestBody {
+  imageBase64: string;
+  mimeType: string;
+}
+
+export interface IdentifyResponseBody {
+  name?: string;
+  info?: string[];
+  summary?: string;
+  error?: string;
+  source: "scraper";
 }

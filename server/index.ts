@@ -1,11 +1,13 @@
-import "./src/env"; 
+import "./src/env";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { handleChat } from "./src/chat";
-import { llmSummary } from "./src/llm";
-import { ChatRequestBody } from "./src/types";
+import { PersonScraper } from "./src/chat";
+import { llmSummary, summarizePersonInfo } from "./src/llm";
+import { ChatRequestBody, IdentifyRequestBody, IdentifyResponseBody } from "./src/types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +15,7 @@ const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT) || 8787;
 const CLIENT_ROOT = path.resolve(__dirname, "../client");
 const MAX_BODY_BYTES = 8 * 1024; // a spoken/typed message is short; refuse anything absurd
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6 MB — enough for any reasonable photo in base64
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -52,13 +55,13 @@ function serveStatic(urlPath: string, res: http.ServerResponse) {
   });
 }
 
-function readJsonBody<T>(req: http.IncomingMessage): Promise<T> {
+function readJsonBody<T>(req: http.IncomingMessage, maxBytes = MAX_BODY_BYTES): Promise<T> {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks: Buffer[] = [];
     req.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(new Error("Request body too large"));
         req.destroy();
         return;
@@ -91,6 +94,45 @@ const server = http.createServer(async (req, res) => {
     } catch (err: any) {
       console.error("[api/chat] bad request:", err?.message || err);
       return sendJson(res, 400, { error: err?.message || "Bad request" });
+    }
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/identify") {
+    let tmpPath: string | null = null;
+    try {
+      const body = await readJsonBody<IdentifyRequestBody>(req, MAX_IMAGE_BYTES);
+      if (!body.imageBase64 || typeof body.imageBase64 !== "string") {
+        return sendJson(res, 400, { error: "Missing imageBase64 field" });
+      }
+
+      // Determine extension from mime type, defaulting to .jpg
+      const ext = (body.mimeType || "image/jpeg").split("/")[1]?.replace("jpeg", "jpg") || "jpg";
+      tmpPath = path.join(os.tmpdir(), `vision-identify-${Date.now()}.${ext}`);
+      await fs.promises.writeFile(tmpPath, Buffer.from(body.imageBase64, "base64"));
+
+      const scraper = new PersonScraper();
+      const result = await scraper.scrape(tmpPath);
+
+      let summary: string | undefined;
+      if (result.success && result.name && result.info && result.info.length > 0) {
+        console.log(`[api/identify] Generating summary for: ${result.name}`);
+        summary = await summarizePersonInfo(result.name, result.info);
+        console.log(`[api/identify] Generated summary: "${summary}"`);
+      }
+
+      const response: IdentifyResponseBody = result.success
+        ? { name: result.name, info: result.info, summary, source: "scraper" }
+        : { error: result.error || "Could not identify person", source: "scraper" };
+
+      return sendJson(res, 200, response);
+    } catch (err: any) {
+      console.error("[api/identify] error:", err?.message || err);
+      return sendJson(res, 500, { error: err?.message || "Server error", source: "scraper" });
+    } finally {
+      // Clean up the temp file even if something threw
+      if (tmpPath) {
+        fs.promises.unlink(tmpPath).catch(() => {});
+      }
     }
   }
 

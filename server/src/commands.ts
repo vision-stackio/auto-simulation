@@ -48,10 +48,15 @@ function sanitizeArg(command: CommandType, rawArg: string | undefined): number |
  * parse, is silently dropped — never surfaced to the rig, never left
  * dangling in the spoken reply either.
  */
-export function extractCommands(raw: string): { text: string; instructions: Instruction[] } {
+export function extractCommands(raw: string): { text: string; instructions: Instruction[]; action?: "open_identify" } {
   const instructions: Instruction[] = [];
+  let action: "open_identify" | undefined = undefined;
 
   const cleaned = raw
+    .replace(/\[\[ACTION:OPEN_IDENTIFY\]\]/gi, () => {
+      action = "open_identify";
+      return "";
+    })
     .replace(/\[\[(CMD|WAIT):([^\]]*)\]\]/gi, (_match, kind: string, body: string) => {
       if (instructions.length >= MAX_INSTRUCTIONS_PER_TURN) return "";
 
@@ -73,7 +78,7 @@ export function extractCommands(raw: string): { text: string; instructions: Inst
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return { text: cleaned, instructions };
+  return { text: cleaned, instructions, ...(action ? { action } : {}) };
 }
 
 interface DirectMatch {
