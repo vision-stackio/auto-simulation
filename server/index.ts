@@ -26,6 +26,9 @@ const MIME: Record<string, string> = {
   ".obj": "text/plain; charset=utf-8",
   ".ico": "image/x-icon",
   ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".webm": "audio/webm",
+  ".opus": "audio/opus",
 };
 
 function send(res: http.ServerResponse, status: number, body: string | Buffer, contentType: string) {

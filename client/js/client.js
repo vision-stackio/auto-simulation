@@ -37,6 +37,33 @@ const MAX_HISTORY = 8;
 
 let busyExecuting = false; // true while a command sequence is playing
 let idleTimer = null;
+let musicAudio = null; // HTMLAudioElement for PLAY_MUSIC
+
+function stopMusic() {
+  if (musicAudio) {
+    try { musicAudio.pause(); musicAudio.currentTime = 0; } catch (_) {}
+    musicAudio = null;
+  }
+}
+
+function playMusic(url) {
+  stopMusic();
+  if (!url || typeof url !== "string") return;
+  // Only allow same-origin /downloads paths
+  if (!url.startsWith("/downloads/")) {
+    console.warn("PLAY_MUSIC blocked non-downloads URL:", url);
+    return;
+  }
+  musicAudio = new Audio(url);
+  musicAudio.volume = 0.9;
+  musicAudio.play().catch((err) => console.error("Music play failed:", err));
+  musicAudio.onended = () => {
+    musicAudio = null;
+    if (els.bodyState && els.bodyState.textContent === "Playing music") {
+      els.bodyState.textContent = "Idle";
+    }
+  };
+}
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
@@ -150,6 +177,19 @@ async function executeInstructions(instructions) {
         // with movement; this tag alone just leaves a short beat.
         await delay(300);
         break;
+
+      case "PLAY_MUSIC": {
+        if (typeof arg === "string" && arg) {
+          playMusic(arg);
+          if (els.bodyState) els.bodyState.textContent = "Playing music";
+        }
+        break;
+      }
+
+      case "STOP_MUSIC": {
+        stopMusic();
+        break;
+      }
 
       default:
         break;

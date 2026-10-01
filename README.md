@@ -123,3 +123,24 @@ There’s also a keyboard icon (bottom-right) for typed input if speech recognit
 * **Providers:** Point `LLM_API_URL` at any OpenAI-compatible server (OpenRouter, Ollama, LM Studio, vLLM, etc.), or set `LLM_PROVIDER=anthropic` for Anthropic’s Messages API.
 
 <br/>
+
+
+## Music (play a song)
+
+Say or type any of:
+
+| You say | What happens |
+| :------ | :----------- |
+| *"play never gonna give you up"* | Searches YouTube, downloads MP3, plays it |
+| *"Vision, play despacito"* | Same, with wake word |
+| *"play shape of you and dance"* | Plays the song **and** starts the dance animation |
+| *"stop"* / *"Vision, stop"* | Stops music + movement |
+
+Requirements on the machine running the server:
+
+- `yt-dlp` on `PATH` (or set `YT_DLP_PATH`)
+- `ffmpeg` / `ffprobe` (or set `FFMPEG_PATH` to their directory)
+
+Downloaded files are cached under `downloads/` and served at `/downloads/...`.
+
+If YouTube returns 403 from your network, update yt-dlp (`yt-dlp -U`) or pass cookies via yt-dlp config.
