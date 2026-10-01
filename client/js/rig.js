@@ -6,14 +6,14 @@ export const Rig = (function () {
   let groundGrid = null, groundFloor = null, groundCell = 1;
   let radius = 1;
   let modelHeight = 1;
-  const view = { theta: 0, phi: Math.PI * 0.48, dist: 3 };
+  const view = { theta: 0, phi: Math.PI * 0.31, dist: 3 };
   const target = new THREE.Vector3();
   let t = 0;
 
   const mode = { walking: false, walkDir: 1, dancing: false, stopped: false };
   let bodyTurnDeg = 0;
   let eyeAngleDeg = 90;
-  let idleNudgeDeg = 0; // subtle extra offset while the mic hears someone talking
+  let idleNudgeDeg = 0;
 
   function parseOBJ(text) {
     const lines = text.split("\n");
@@ -26,7 +26,6 @@ export const Rig = (function () {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (line.charCodeAt(0) === 118 && line.charCodeAt(1) === 32) {
-        // "v "
         const p = line.trim().split(/\s+/);
         const vx = parseFloat(p[1]), vy = parseFloat(p[2]), vz = parseFloat(p[3]);
         positions.push(vx, vy, vz);
@@ -38,7 +37,6 @@ export const Rig = (function () {
           colors.push(0.75, 0.75, 0.75);
         }
       } else if (line.charCodeAt(0) === 102 && line.charCodeAt(1) === 32) {
-        // "f "
         const f = line.trim().split(/\s+/);
         for (let k = 1; k < f.length; k++) faces.push(parseInt(f[k].split("/")[0], 10) - 1);
       }
@@ -94,8 +92,6 @@ export const Rig = (function () {
     renderer.setSize(mount.clientWidth, mount.clientHeight);
   }
 
-  /** Snap flat ground under the robot in whole-cell steps so it never ends
-   *  and grid lines stay world-aligned (no crawling under the feet). */
   function updateInfiniteGround() {
     if (!groundGrid) return;
     const gx = Math.round(root.position.x / groundCell) * groundCell;
@@ -115,7 +111,6 @@ export const Rig = (function () {
     if (model && !mode.stopped) {
       let bob = 0, sway = 0, lean = 0;
       if (mode.dancing) {
-        // Layered dance: bounce, hip rock, lean, spin wiggle, small circle
         const beat = t * 6.2;
         const half = t * 3.1;
         const double = t * 12.4;
@@ -129,7 +124,6 @@ export const Rig = (function () {
         const eyeYaw = ((eyeAngleDeg + idleNudgeDeg - 90) / 90) * 0.28;
         root.rotation.y = Math.PI + (bodyTurnDeg * Math.PI) / 180 + danceYaw + eyeYaw * 0.25;
       } else if (mode.walking) {
-        // Step cycle on solid mesh — bob, weight shift, lean
         const step = t * 5.2;
         const stepSin = Math.sin(step);
         const stepAbs = Math.abs(stepSin);
@@ -150,7 +144,6 @@ export const Rig = (function () {
       root.rotation.z = sway;
       root.rotation.x = lean;
       root.position.y = bob;
-      // Camera + infinite ground follow the robot
       target.x = root.position.x;
       target.z = root.position.z;
       updateInfiniteGround();
@@ -201,7 +194,6 @@ export const Rig = (function () {
       model.position.set(-parsed.centroid.x, -parsed.geo.boundingBox.min.y, -parsed.centroid.z);
       root.add(model);
 
-      // Flat grid — regenerated under the robot via cell snap (infinite look)
       const gridSize = 80, gridDivs = 80;
       groundCell = gridSize / gridDivs;
       const grid = new THREE.GridHelper(gridSize, gridDivs, 0x2e2e32, 0x18181a);
@@ -219,7 +211,9 @@ export const Rig = (function () {
       groundFloor = floorMesh;
 
       modelHeight = s.y;
-      view.dist = radius / Math.sin(((camera.fov * Math.PI) / 180) / 2) * 1.05;
+      view.theta = 0;
+      view.phi = Math.PI * 0.45;
+      view.dist = radius / Math.sin(((camera.fov * Math.PI) / 180) / 2) * 1.8;
       loadingEl.style.display = "none";
     } catch (e) {
       loadingEl.textContent = "Could not load 3D model";
