@@ -20,11 +20,10 @@
 
 ## Table of Contents
 1. [What it does](#-what-it-does)
-2. [Layout](#-layout)
-3. [Setup](#-setup)
-4. [Run the Simulation](#-run-the-simulation)
-5. [Try it](#-try-it)
-6. [Notes & Technical Details](#-notes--technical-details)
+2. [Setup](#-setup)
+3. [Run the Simulation](#-run-the-simulation)
+4. [Try it](#-try-it)
+5. [Notes & Technical Details](#-notes--technical-details)
 
 <br/>
 
@@ -112,18 +111,6 @@ There’s also a keyboard icon (bottom-right) for typed input if speech recognit
 
 <br/>
 
-## Notes & Technical Details
-
-* **Safety first:** Nothing from the LLM (or a spoken phrase) reaches the animation layer without passing through a fixed safelist and numeric clamps. See `server/src/commands.ts` for wake-word patterns and `extractCommands()` validation. Only names in `COMMAND_TYPES` (`server/src/types.ts`) are recognized.
-* **Command tags:** The model may embed `[[CMD:NAME]]`, `[[CMD:NAME arg]]`, or `[[WAIT:ms]]` in its reply. Tags are stripped before speech; only validated instructions are sent to the browser.
-* **Eye parameters:** `EYE_SET` takes an absolute angle `0–180` (`90` = center). `EYE_LEFT` / `EYE_RIGHT` take an optional relative step (default `15°`).
-* **Durational moves:** `TURN_*`, `WALK_*`, and `DANCE` accept a duration in ms (clamped). Defaults live in `client/js/client.js`.
-* **Visual approximation:** This is a browser demo, not a hardware controller. Animations are expressive, not physically accurate.
-* **LLM errors:** Failures (timeout, 429, bad model id, etc.) are logged in the server terminal as `[LLM]` / `[chat]` lines and shown to the user as a spoken/caption fallback reply.
-* **Providers:** Point `LLM_API_URL` at any OpenAI-compatible server (OpenRouter, Ollama, LM Studio, vLLM, etc.), or set `LLM_PROVIDER=anthropic` for Anthropic’s Messages API.
-
-<br/>
-
 
 ## Music (play a song)
 
@@ -144,3 +131,17 @@ Requirements on the machine running the server:
 Downloaded files are cached under `downloads/` and served at `/downloads/...`.
 
 If YouTube returns 403 from your network, update yt-dlp (`yt-dlp -U`) or pass cookies via yt-dlp config.
+
+
+## Notes & Technical Details
+
+* **Safety first:** Nothing from the LLM (or a spoken phrase) reaches the animation layer without passing through a fixed safelist and numeric clamps. See `server/src/commands.ts` for wake-word patterns and `extractCommands()` validation. Only names in `COMMAND_TYPES` (`server/src/types.ts`) are recognized.
+* **Command tags:** The model may embed `[[CMD:NAME]]`, `[[CMD:NAME arg]]`, or `[[WAIT:ms]]` in its reply. Tags are stripped before speech; only validated instructions are sent to the browser.
+* **Eye parameters:** `EYE_SET` takes an absolute angle `0–180` (`90` = center). `EYE_LEFT` / `EYE_RIGHT` take an optional relative step (default `15°`).
+* **Durational moves:** `TURN_*`, `WALK_*`, and `DANCE` accept a duration in ms (clamped). Defaults live in `client/js/client.js`.
+* **Visual approximation:** This is a browser demo, not a hardware controller. Animations are expressive, not physically accurate.
+* **LLM errors:** Failures (timeout, 429, bad model id, etc.) are logged in the server terminal as `[LLM]` / `[chat]` lines and shown to the user as a spoken/caption fallback reply.
+* **Providers:** Point `LLM_API_URL` at any OpenAI-compatible server (OpenRouter, Ollama, LM Studio, vLLM, etc.), or set `LLM_PROVIDER=anthropic` for Anthropic’s Messages API.
+
+<br/>
+
