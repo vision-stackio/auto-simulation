@@ -65,8 +65,69 @@
       <input id="fallbackText" type="text" placeholder="Type to Vision…" autocomplete="off" />
       <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
     </form>
-    <button class="keyboard-toggle" id="keyboardToggle" title="Type instead"><i class="fa-solid fa-keyboard"></i></button>
+    <div class="stage-actions">
+      <button class="action-btn identify-toggle" id="identifyToggle" title="Identify Person / Upload Photo" aria-label="Identify person">
+        <i class="fa-solid fa-user-magnifying-glass"></i>
+      </button>
+      <button class="action-btn keyboard-toggle" id="keyboardToggle" title="Type instead" aria-label="Type message">
+        <i class="fa-solid fa-keyboard"></i>
+      </button>
+    </div>
   </div>
+
+  <!-- ── Identify-person panel — slides in from the right when Vision
+       hears "identify this person" / "do you know him/her" ── -->
+  <aside class="identify-panel" id="identifyPanel" aria-hidden="true">
+    <div class="identify-header">
+      <div class="identify-header-left">
+        <i class="fa-solid fa-user-magnifying-glass identify-icon"></i>
+        <div>
+          <div class="identify-title">Who is this?</div>
+          <div class="identify-sub">Upload a photo and I'll try to identify them</div>
+        </div>
+      </div>
+      <button class="identify-close" id="identifyClose" title="Close" aria-label="Close identify panel">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="identify-dropzone" id="identifyDropzone">
+      <input type="file" id="identifyFileInput" accept="image/*" hidden />
+      <div class="dropzone-inner" id="dropzoneInner">
+        <i class="fa-solid fa-image dropzone-icon"></i>
+        <div class="dropzone-label">Drop a photo here</div>
+        <div class="dropzone-hint">or click to browse</div>
+      </div>
+      <!-- Preview shown after a file is selected -->
+      <img class="dropzone-preview" id="dropzonePreview" alt="Selected image" hidden />
+    </div>
+
+    <button class="identify-submit" id="identifySubmit" disabled>
+      <i class="fa-solid fa-magnifying-glass"></i>
+      Identify Person
+    </button>
+
+    <!-- Content area: loader, error, and result all share the same flex region.
+         Loader/error are absolutely positioned overlays so toggling them never
+         causes any layout shift in the panel itself. -->
+    <div class="identify-content" id="identifyContent">
+      <!-- Loading state -->
+      <div class="identify-loader" id="identifyLoader" hidden>
+        <i class="fa-solid fa-spinner fa-spin"></i> Identifying…
+      </div>
+
+      <!-- Error state -->
+      <div class="identify-error" id="identifyError" hidden></div>
+
+      <!-- Result state -->
+      <div class="identify-result" id="identifyResult" hidden>
+        <div class="result-name" id="resultName"></div>
+        <div class="result-summary" id="resultSummary" hidden></div>
+        <div class="result-info" id="resultInfo"></div>
+      </div>
+    </div>
+  </aside>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
